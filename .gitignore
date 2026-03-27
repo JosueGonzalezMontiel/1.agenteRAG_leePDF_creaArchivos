@@ -1,0 +1,35 @@
+# Entornos virtuales
+.venv/
+venv/
+env/
+bin/
+lib/
+share/
+include/
+
+# Caché de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Variables de entorno (SECRETOS)
+.env
+
+# Archivos de Datos (Locales y temporales)
+data/memoria.json
+data/*.index
+data/vector_store_meta.json
+
+# Opcional: Ignorar los documentos fuente en data/docs si son privados
+# data/docs/
+
+# IDEs y Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema Operativo
+.DS_Store
+Thumbs.db
+Desktop.ini
