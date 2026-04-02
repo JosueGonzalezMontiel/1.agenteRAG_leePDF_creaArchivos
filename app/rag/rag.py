@@ -10,6 +10,7 @@ def responder_con_rag(pregunta):
 
     # 2. buscar contexto relevante
     docs = buscar(query_embedding)
+    docs = docs[:3]
 
     contexto = "\n\n".join([d["texto"] for d in docs])
     

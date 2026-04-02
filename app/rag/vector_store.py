@@ -55,7 +55,7 @@ def agregar_documento(texto, embedding, fuente):
     _guardar()
 
 
-def buscar(query_embedding, k=3):
+def buscar(query_embedding, k=5):
     if index.ntotal == 0:
         return []
 

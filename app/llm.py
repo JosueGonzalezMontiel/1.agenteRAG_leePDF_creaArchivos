@@ -19,9 +19,8 @@ def generar_respuesta(messages, stream=True):
         model="openai/gpt-oss-120b", 
         messages=messages,           
         temperature=0.7,             
-        max_completion_tokens=16384,  
+        max_completion_tokens=2048,  
         top_p=1,                     
-        reasoning_effort="medium",   
         stream=False,                
     )
 
@@ -33,7 +32,7 @@ def resumir_texto(texto):
     '''
     completion = client.chat.completions.create(
         model="openai/gpt-oss-120b",
-        # Aquí estamos creando un mini-historial en "crudo" de un solo mensaje para pedirle el resumen al modelo.
+        max_completion_tokens=1024,
         messages=[{"role": "user", "content": f"Resume el siguiente chat conservando la información crucial:\n{texto}"}]
     )
     # Volvemos solo el contenido de texto puro de su respuesta.

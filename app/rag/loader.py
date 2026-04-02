@@ -4,7 +4,7 @@ import os
 import pypdf
 
 #se agrega para dividir en varios embeddings el texto de un doc
-def dividir_en_chunks(texto, tamaño=300, solapamiento=50):
+def dividir_en_chunks(texto, tamaño=500, solapamiento=100):
     chunks = []
     inicio = 0
 

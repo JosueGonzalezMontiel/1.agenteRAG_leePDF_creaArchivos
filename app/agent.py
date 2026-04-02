@@ -3,43 +3,27 @@
 import json
 import re 
 # Importamos las herramientas (incluyendo la nueva de RAG: ask_pdf)
-from app.tools.file_tools import list_files_in_dir, read_file, edit_file
-from app.tools.pdf_tools import ask_pdf
+from app.tools import TOOLS
+from app.logger import logger
 
 
 def ejecutar_tool(data):
-    '''
-    Recibe un diccionario (ya parseado desde JSON) y ejecuta la herramienta correspondiente.
-    Devuelve el resultado como string, o None si no es una herramienta válida.
-    '''
     tool_name = data.get("tool")
+    
+    tool = TOOLS.get(tool_name)
 
-    if tool_name == "list_files":
-        directory = data.get("directory", ".")
-        return list_files_in_dir(directory)
+    if not tool:
+        return f"Tool {tool_name} no encontrada"
 
-    elif tool_name == "read_file":
-        file_path = data.get("file_path")
-        if file_path:
-            return read_file(file_path)
-        return "Error: no se proporcionó file_path"
+    try:
+        # quitamos la clave "tool" y pasamos lo demás como kwargs
+        params = {k: v for k, v in data.items() if k != "tool"}
+        return tool(**params)
 
-    elif tool_name == "edit_file":
-        file_path = data.get("file_path")
-        prev_text = data.get("prev_text")
-        new_text = data.get("new_text")
-        if file_path and new_text:
-            return edit_file(file_path, prev_text, new_text)
-        return "Error: faltan parámetros file_path o new_text"
-
-    elif tool_name == "ask_pdf":
-        question = data.get("question")
-        if question:
-            return ask_pdf(question)
-        return "Error: no se proporcionó la pregunta (question)"
-
-    # Si no reconoce la herramienta, devuelve None
-    return None
+    except TypeError as e:
+        return f"Error en parámetros de la tool {tool_name}: {e}"
+    except Exception as e:
+        return f"Error ejecutando {tool_name}: {e}"
 
 
 def extraer_jsons(texto):
@@ -110,7 +94,7 @@ def procesar_respuesta(respuesta, messages):
             if resultado is not None:
                 resultados.append(resultado)
         except Exception as e:
-            print("Error ejecutando tool:", e)
+            logger.error("Error ejecutando tool", exc_info=True)
             resultados.append(f"Error: {e}")
 
     if resultados:

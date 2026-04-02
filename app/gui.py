@@ -1,10 +1,12 @@
 import flet as ft
 import asyncio
-from app.memory import cargar_memoria, guardar_memoria, limitar_historial, resumir_si_necesario
-from app.llm import generar_respuesta
-from app.agent import procesar_respuesta
+from app.memory import cargar_memoria
+from app.agent_core import Agent
 
 def main(page: ft.Page):
+    from app.config import SYSTEM_PROMPT
+
+    agent = Agent(SYSTEM_PROMPT)
     # 1. Page & Font setup
     page.fonts = {
         "Space Grotesk": "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&display=swap"
@@ -256,78 +258,14 @@ def main(page: ft.Page):
         
         async def process():
             msgs = cargar_memoria()
+
+            respuesta_final = agent.run(text, msgs)
+
+            if loader_wrapper in messages_column.controls:
+                messages_column.controls.remove(loader_wrapper)
+
+            add_message_bubble("assistant", respuesta_final)
             
-            SYSTEM_PROMPT = """
-            Eres un asistente que habla español y es concreto.
-
-            Tienes acceso a las siguientes herramientas:
-            1. Listar archivos
-            2. Leer archivos
-            3. Editar o crear archivos
-            4. Consultar información de documentos PDF (RAG)
-
-            REGLAS:
-            - Si el usuario pide ver archivos, listar directorios, leer código, editar/crear archivos, o buscar información en PDFs, SIEMPRE debes usar la herramienta correspondiente.
-            - NO respondas con texto normal en esos casos.
-            - SOLO responde en JSON válido EXACTAMENTE en estos formatos, según lo que necesites hacer:
-
-            Para listar archivos:
-            {"tool": "list_files", "directory": "ruta"}
-
-            Para leer un archivo:
-            {"tool": "read_file", "file_path": "ruta"}
-
-            Para editar o crear un archivo:
-            {"tool": "edit_file", "file_path": "ruta", "prev_text": "texto viejo a reemplazar (o null si es nuevo)", "new_text": "texto nuevo"}
-
-            Para leer información de PDFs:
-            {"tool": "ask_pdf", "question": "pregunta clara y especifica sobre la informacion que buscas"}
-
-            - IMPORTANTE: Cuando uses "ask_pdf", yo te devolveré un resultado con el contexto de "Fuente principal" y "Fragmento usado". En tu Siguiente Turno, DEBES TRANSCRIBIR EXACTAMENTE el resultado junto a sus fuentes si es la información que el usuario pidió, sin cortarlo ni resumirlo.
-            - NO agregues texto adicional ni Markdown extra fuera del JSON cuando llames herramientas.
-            - Escribe el código dentro de prev_text y new_text de forma natural.
-
-            Para cualquier otra cosa, responde normal.
-            """
-            
-            has_system = any(m.get("role") == "system" for m in msgs)
-            if has_system:
-                for m in msgs:
-                    if m.get("role") == "system":
-                        m["content"] = SYSTEM_PROMPT
-                        break
-            else:
-                msgs.insert(0, {"role": "system", "content": SYSTEM_PROMPT})
-                
-            msgs.append({"role": "user", "content": text})
-            
-            # Bucle React para herramientas
-            while True:
-                msgs = resumir_si_necesario(msgs)
-                msgs = limitar_historial(msgs)
-                
-                completion = generar_respuesta(msgs, stream=False)
-                raw = completion.choices[0].message.content
-                tiene_tools, respuesta_final = procesar_respuesta(raw, msgs)
-                
-                if tiene_tools:
-                    # Guardamos intención JSON
-                    msgs.append({"role": "assistant", "content": raw})
-                    
-                    # Le pasamos el resultado a la siguiente vuelta
-                    msgs.append({
-                        "role": "user", 
-                        "content": f"Resultado de herramientas:\n{respuesta_final}\n\nCon base en esto, ¿cuál es tu siguiente paso? (escribe JSON si usas otra herramienta; si no, responde al usuario incluyendo las fuentes copiadas exactamente igual si usaste ask_pdf)"
-                    })
-                else:
-                    if loader_wrapper in messages_column.controls:
-                        messages_column.controls.remove(loader_wrapper)
-                    
-                    add_message_bubble("assistant", respuesta_final)
-                    msgs.append({"role": "assistant", "content": respuesta_final})
-                    guardar_memoria(msgs)
-                    break
-        
         asyncio.create_task(process())
 
 
